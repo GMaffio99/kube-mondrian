@@ -1,0 +1,71 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: spark-mondrian
+  namespace: default
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: pyspark-mondrian:latest
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///mondrian/anonymize.py
+  deps:
+    pyFiles:
+      - local:///mondrian/mondrian.zip
+  arguments:
+    - /data/config/adults-test.json  # config file
+    - "3"  # workers
+    - "0"  # demo
+    - "0"  # test
+  sparkVersion: "3.5.0"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "2G"
+    serviceAccount: spark-operator-spark
+    volumeMounts:
+      - name: spark-mondrian-storage
+        mountPath: /data
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-role.kubernetes.io/master
+              operator: In
+              values:
+              - "true"
+  executor:
+    cores: 1
+    instances: 3
+    memory: "2G"
+    volumeMounts:
+      - name: spark-mondrian-storage
+        mountPath: /data
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-role.kubernetes.io/master
+              operator: NotIn
+              values:
+              - "true"
+  volumes:
+    - name: spark-mondrian-storage
+      persistentVolumeClaim:
+        claimName: spark-mondrian-claim
+  sparkConf:
+    #spark.ui.port: "4045"
+    #spark.eventLog.enabled: "true"
+    #spark.eventLog.dir": "hdfs://hdfs-namenode-1:8020/spark/spark-events"
+    spark.scheduler.mode: "FIFO"
+    spark.default.parallelism: "3"
+    spark.sql.shuffle.partitions: "3"
