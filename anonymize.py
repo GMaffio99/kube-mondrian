@@ -19,6 +19,7 @@ import time
 
 import math
 import pandas as pd
+from pyspark import SparkFiles
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
@@ -79,6 +80,10 @@ def main():
     spark = SparkSession \
         .builder \
         .getOrCreate()
+
+    # Add python dependency files
+    mondrian_zip_path = SparkFiles.get("mondrian.zip")
+    spark.sparkContext.addPyFile(mondrian_zip_path)
 
     spark.sparkContext.setLogLevel("WARN")
 
