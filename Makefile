@@ -94,7 +94,7 @@ start-app:
 	kubectl apply -f deploy/spark-mondrian.yaml
 
 stop-app:
-	kubectl delete -f deploy/spark.mondrian.yaml
+	kubectl delete -f deploy/spark-mondrian.yaml
 
 create-cluster:
 	k3d cluster create ${CLUSTER} --servers ${NUM_SERVERS} --agents ${NUM_AGENTS} --kubeconfig-update-default

@@ -113,7 +113,7 @@ def main():
     if fraction is not None and (fraction <= 0 or fraction > 1):
         raise ValueError("Fraction value must be in (0:1]")
     to_sample = (fraction is not None and fraction != 1)
-    fragments = min(args.WORKERS, job.get('max_fragments', 10**6))
+    fragments = int(job.get('fragments', args.WORKERS))
     is_parallel = job.get('parallel', False)
     repartition = job.get('repartition', 'repartitionByRange')
     if repartition not in REPARTITIONS:
@@ -179,7 +179,7 @@ def main():
     if fragmentation == 'mondrian':
         # Mondrian
         if is_parallel:
-            print(f"\n[*] Run {preposition} sampling and parallelization"
+            print(f"\n[*] Run {preposition} sampling and with parallelization"
                   f" - Mondrian cuts")
             df, bins = mondrian_with_parallelization(
                 df=df,
@@ -227,25 +227,32 @@ def main():
             df = mondrian_buckets(df, bins)
     elif fragmentation == 'quantile':
         # Quantile
-        # TODO: Add parallel implementation of the quantile fragmentation
-        print(f"\n[*] Run {preposition} sampling - Quantile cuts\n")
-        pdf = df.toPandas()
-        pdf, column, bins = quantile_fragmentation(
+        if is_parallel:
+            print(f"\n[*] Run {preposition} sampling and with parallelization"
+                  f" - Quantile cuts")
+            pdf = df.pandas_api()
+        else:
+            print(f"\n[*] Run {preposition} sampling - Quantile cuts\n")
+            pdf = df.toPandas()
+
+        column, bins = quantile_fragmentation(
             df=pdf,
             quasiid_columns=quasiid_columns,
             column_score=column_score,
-            fragments=fragments,
-            colname='fragment'
+            fragments=fragments
         )
+
         if to_sample:
             # Read entire file in distributed manner
             df = spark.read \
                 .options(header='true', inferSchema='true') \
                 .format(extension).load(filename_in)
-            df = quantile_buckets(df, column, bins)
-        else:
+        elif not is_parallel:
             # Distribute dataframe
             df = spark.createDataFrame(pdf)
+
+        # Paritition dataframe according to the bins
+        df = quantile_buckets(df, column, bins)
 
     # Check result of the initial fragmentation
     sizes = df.groupBy('fragment').count()
@@ -303,11 +310,15 @@ def main():
             df,
             quasiid_columns
         )
-        column_score = functools.partial(
-            norm_span,
-            total_spans=quasiid_spans_by_name,
-            categoricals_with_order=categoricals_with_order
-        )
+
+        # Update scoring with normalized span by passing the new total span of
+        # the quasi-identifiers columns
+        if (init_quasiid_spans and to_sample):
+            column_score = functools.partial(
+                norm_span,
+                total_spans=quasiid_spans_by_name,
+                categoricals_with_order=categoricals_with_order
+            )
 
     # Create the pandas udf
     @F.pandas_udf(schema, F.PandasUDFType.GROUPED_MAP)
