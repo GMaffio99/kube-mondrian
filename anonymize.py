@@ -440,7 +440,8 @@ def main():
     # Write file according to extension
     print(f"\n[*] Writing to {filename_out}\n")
     extension = get_extension(filename_out)
-    adf.write \
+    adf.coalesce(1) \
+        .write \
         .mode("overwrite") \
         .options(header=True) \
         .format(extension) \
@@ -452,12 +453,12 @@ def main():
     measures_log["time"] = execution_time
 
     if test == 1:
-        # Write test params to Hadoop
+        # Write test params
         test_result_files = [
-            "hdfs://namenode:8020/anonymized/test_results.csv",
-            "hdfs://namenode:8020/anonymized/artifact_result.csv"
+            "/data/anonymized/test_results.csv",
+            "/data/anonymized/artifact_result.csv"
         ]
-        print("[*] Creating test configuration file on Hadoop")
+        print("[*] Creating test configuration file")
         write_test_params(spark, measures_log, test_result_files)
 
     if demo == 0:
