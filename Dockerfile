@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#FROM bitnami/spark:3.5.0
-#FROM apache/spark:3.5.0-python3
 FROM apache/spark-py:v3.4.0
 
 USER root
@@ -24,10 +22,9 @@ RUN ["pip", "install", "--upgrade", "pip"]
 RUN ["pip", "install", "--requirement", "/tmp/requirements.txt"]
 
 # import files
-#RUN mkdir "/mondrian" "/config" "/dataset" "/taxonomy" "/anonymized"
 RUN mkdir "/mondrian"
 COPY anonymize.py /mondrian/
 COPY mondrian.zip /mondrian/
-#COPY config/* /config/
-#COPY dataset/* /dataset/
-#COPY taxonomy/* /taxonomy/
+
+# [history server] overwrite default directory containing application event logs
+# RUN echo "spark.history.fs.logDirectory /data/spark-events" >> $SPARK_HOME/conf/spark-defaults.conf
