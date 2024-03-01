@@ -1,0 +1,44 @@
+{
+    "input": "/data/dataset/adults.csv",
+    "output": "/data/anonymized/adults.csv",
+    "fraction": 1,
+    "id_columns": ["capital-loss", "capital-gain"],
+    "redact": true,
+    "quasiid_columns": ["age", "education-num", "race", "native-country"],
+    "sensitive_columns": ["income"],
+    "column_score": "entropy",
+    "fragmentation": "mondrian",
+    "K": 3,
+    "L": 2,
+    "quasiid_generalizations": [
+        {
+            "qi_name": "native-country",
+            "generalization_type": "categorical",
+            "params": {
+                "taxonomy_tree": "/data/taxonomy/countries.json"
+            }
+        },
+        {
+            "qi_name": "age",
+            "generalization_type": "numerical",
+            "params": {
+                "fanout": 2,
+                "accuracy": 2,
+                "digits": 3
+            }
+        },
+        {
+            "qi_name": "education-num",
+            "generalization_type": "common_prefix",
+            "params": {
+                "hide_mark": "+",
+                "char_domain_size": 10
+            }
+        }
+    ],
+    "measures": [
+        "discernability_penalty",
+        "normalized_certainty_penalty",
+        "global_certainty_penalty"
+    ]
+}
